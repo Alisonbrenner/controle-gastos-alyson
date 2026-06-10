@@ -23,7 +23,7 @@ dados["valor"] = (
 dados["valor"] = pd.to_numeric(dados["valor"], errors="coerce")
 dados["ano_mes"] = dados["data"].dt.strftime("%Y-%m")
 
-# Filtros
+# Filtros na Barra Lateral
 st.sidebar.header("Filtros")
 meses = sorted(dados["ano_mes"].dropna().unique(), reverse=True)
 mes_selecionado = st.sidebar.selectbox("🗓️ Selecione o mês", meses)
@@ -34,7 +34,19 @@ categoria_selecionada = st.sidebar.selectbox("🏷️ Categoria", categorias)
 nomes = ["Todos"] + sorted(dados["nome"].dropna().unique())
 nome_selecionado = st.sidebar.selectbox("👤 Responsável", nomes)
 
-# Aplicar filtros
+# --- NOVA SEÇÃO: Entrada de Receita ---
+st.sidebar.markdown("---")
+st.sidebar.header("💰 Resumo Financeiro")
+# Campo para inserir o valor a receber (com valor padrão de 0.00)
+valor_receber = st.sidebar.number_input(
+    "Valor disponível a receber (R$):", 
+    min_value=0.0, 
+    value=0.0, 
+    step=100.0, 
+    format="%.2f"
+)
+
+# Aplicar filtros nos dados
 filtro = dados[dados["ano_mes"] == mes_selecionado]
 
 if categoria_selecionada != "Todas":
@@ -43,13 +55,22 @@ if categoria_selecionada != "Todas":
 if nome_selecionado != "Todos":
     filtro = filtro[filtro["nome"] == nome_selecionado]
 
-# KPIs
-col1, col2 = st.columns(2)
-col1.metric("💰 Total de gastos mês selecionado:", f"R$ {filtro['valor'].sum():,.2f}")
-col2.metric("📂 Categorias", filtro["categoria"].nunique())
+# Cálculos para os KPIs
+total_gastos = filtro['valor'].sum()
+saldo_atual = valor_receber - total_gastos
 
+# KPIs - Alterado para 3 colunas para incluir o Saldo Atual
+col1, col2, col3 = st.columns(3)
+col1.metric("📉 Total de gastos mês:", f"R$ {total_gastos:,.2f}")
+col2.metric("📂 Categorias do filtro", filtro["categoria"].nunique())
 
-
+# Exibe o saldo atualizado e muda a cor se o saldo for negativo (opcional do Streamlit)
+col3.metric(
+    "🟢 Saldo Atual no Momento:", 
+    f"R$ {saldo_atual:,.2f}", 
+    delta=f"Disponível: R$ {valor_receber:,.2f}", 
+    delta_color="normal"
+)
 
 # Gráfico de barras por categoria (ordenado e com rótulo)
 st.subheader("📊 Gastos por categoria:")
